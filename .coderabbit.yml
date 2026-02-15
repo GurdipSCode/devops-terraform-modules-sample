@@ -1,0 +1,198 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit Configuration for Terraform Modules
+# https://docs.coderabbit.ai/getting-started/configure-coderabbit
+
+language: en-US
+
+tone_instructions: >
+  Be concise and direct. Focus on Terraform best practices, security,
+  and infrastructure reliability. Flag breaking changes prominently.
+
+early_access: false
+
+enable_free_tier: true
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  high_level_summary_placeholder: "@coderabbitai summary"
+  auto_title_placeholder: "@coderabbitai"
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  sequence_diagrams: true
+  changed_files_summary: true
+  labeling_instructions:
+    - label: "breaking-change"
+      instructions: >
+        Apply when variable names, types, defaults, or outputs are renamed/removed,
+        required provider versions are bumped, resource types are replaced (destroy+create),
+        or module interface contracts change in any backward-incompatible way.
+    - label: "security"
+      instructions: >
+        Apply when changes involve IAM, firewall rules, encryption settings,
+        sensitive variables, secrets, network ACLs, or public exposure of resources.
+    - label: "documentation"
+      instructions: >
+        Apply when only README, CHANGELOG, examples, or inline comments are modified.
+    - label: "new-resource"
+      instructions: >
+        Apply when a new Terraform resource or data source block is introduced.
+    - label: "refactor"
+      instructions: >
+        Apply when existing logic is restructured without changing external behavior
+        (e.g., moving resources into sub-modules, renaming locals).
+
+  path_instructions:
+    # ── Root module ──────────────────────────────────────────────────────
+    - path: "*.tf"
+      instructions: >
+        Review as a Terraform root module. Verify:
+        - All variables have description, type, and sensible defaults
+        - Sensitive variables are marked `sensitive = true`
+        - Required provider version constraints use pessimistic (~>) or >= operators
+        - `terraform` block pins required_version
+        - No hardcoded values that should be variables
+        - Outputs include descriptions
+        - Resource naming follows a consistent convention
+        - Tags/labels are applied consistently via default_tags or provider defaults
+
+    # ── Sub-modules ──────────────────────────────────────────────────────
+    - path: "modules/**/*.tf"
+      instructions: >
+        Review as a reusable Terraform sub-module. Verify:
+        - Module has its own variables.tf, outputs.tf, and versions.tf (or main.tf with terraform block)
+        - No provider configuration is declared (providers should be inherited)
+        - Variables use `validation` blocks where appropriate (CIDR, enum, length)
+        - `optional()` is used for object attributes with defaults (Terraform >= 1.3)
+        - Dynamic blocks are preferred over conditional resources where possible
+        - count/for_each choice is intentional (for_each preferred for named resources)
+        - Lifecycle rules (prevent_destroy, ignore_changes) are used where appropriate
+        - No circular dependencies between sub-modules
+
+    # ── Examples ─────────────────────────────────────────────────────────
+    - path: "examples/**/*.tf"
+      instructions: >
+        Review as example usage. Verify:
+        - Example is self-contained and can run with `terraform init && terraform apply`
+        - Variable values are realistic and clearly demonstrate the module's capabilities
+        - Sensitive values use variables (not hardcoded strings)
+        - Comments explain non-obvious choices
+        - Examples cover common use cases, not just the happy path
+
+    # ── Tests ────────────────────────────────────────────────────────────
+    - path: "tests/**/*.tftest.hcl"
+      instructions: >
+        Review as Terraform native test files. Verify:
+        - Tests cover both positive (valid input) and negative (expected failures) cases
+        - `expect_failures` is used for validation testing
+        - Run blocks use realistic variable values
+        - Assert conditions are meaningful and not trivially true
+        - Tests cover important outputs and resource attributes
+
+    - path: "tests/**/*.go"
+      instructions: >
+        Review as Terratest Go test files. Verify:
+        - `defer terraform.Destroy` is always called for cleanup
+        - Retryable errors are handled with `terraform.WithDefaultRetryableErrors`
+        - Assertions validate actual infrastructure state, not just plan output
+        - Parallel testing is enabled where safe
+        - Test timeouts are reasonable
+
+    # ── CI/CD ────────────────────────────────────────────────────────────
+    - path: ".github/**/*.{yml,yaml}"
+      instructions: >
+        Review GitHub Actions workflows for Terraform. Verify:
+        - `terraform fmt -check` and `terraform validate` run on PRs
+        - `tflint` or equivalent linter is configured
+        - `tfsec` / `trivy` / `checkov` runs for security scanning
+        - Plan output is posted as a PR comment
+        - Apply only runs on merge to main/default branch
+        - State backend credentials use OIDC or short-lived tokens, not long-lived secrets
+        - Terraform version is pinned (not "latest")
+
+    # ── Documentation ────────────────────────────────────────────────────
+    - path: "**/*.md"
+      instructions: >
+        Review documentation for Terraform modules. Verify:
+        - README includes: description, usage example, inputs table, outputs table, requirements
+        - terraform-docs or equivalent auto-generation markers are present
+        - Examples in README match actual example files
+        - Breaking changes are called out in CHANGELOG
+        - Links to sub-module READMEs exist if applicable
+
+    # ── Variable definitions ─────────────────────────────────────────────
+    - path: "**/variables.tf"
+      instructions: >
+        Pay special attention to variable definitions. Verify:
+        - Every variable has a `description`
+        - Complex types use `object({})` with `optional()` instead of `any` where feasible
+        - Validation blocks enforce constraints (valid CIDR, allowed enum values, string length)
+        - Sensitive data (passwords, tokens, keys) is marked `sensitive = true`
+        - Default values are safe and do not expose resources publicly
+        - Variable names follow snake_case convention
+        - Nullable is explicitly set when null is a meaningful value
+
+    # ── Output definitions ───────────────────────────────────────────────
+    - path: "**/outputs.tf"
+      instructions: >
+        Verify output definitions:
+        - Every output has a `description`
+        - Sensitive outputs are marked `sensitive = true`
+        - Outputs expose values that downstream consumers actually need
+        - Output names follow snake_case convention
+        - No outputs inadvertently expose secrets or internal implementation details
+
+    # ── Lock files ───────────────────────────────────────────────────────
+    - path: ".terraform.lock.hcl"
+      instructions: >
+        Review the dependency lock file. Verify:
+        - Provider hashes include both platforms used in CI and local development
+        - No unexpected provider additions or removals
+        - Version changes align with changes in required_providers
+
+    # ── Terragrunt ───────────────────────────────────────────────────────
+    - path: "**/*.hcl"
+      instructions: >
+        If this is a Terragrunt config, verify:
+        - Source references use versioned tags (not branches or HEAD)
+        - Inputs are passed explicitly (avoid excessive `include` magic)
+        - Remote state configuration follows organizational standards
+        - Dependencies are declared correctly
+
+  tools:
+    # Enable Terraform-specific tooling
+    enabled:
+      - shellcheck     # For any helper shell scripts
+      - markdownlint   # For documentation quality
+      - yamllint        # For CI/CD configs
+      - checkov        # Terraform security & best-practice scanning
+      # - tflint       # Uncomment if CodeRabbit adds native tflint support
+
+    shellcheck:
+      enabled: true
+
+    markdownlint:
+      enabled: true
+
+    yamllint:
+      enabled: true
+
+    checkov:
+      enabled: true
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  learnings:
+    scope: auto
+  issues:
+    scope: auto
+  jira:
+    project_keys: []
+  linear:
+    team_keys: []
+  pull_requests:
+    scope: auto
