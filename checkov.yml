@@ -1,0 +1,76 @@
+# .checkov.yml — Checkov configuration for Terraform repositories
+# https://www.checkov.io/2.Basics/CLI%20Command%20Reference.html
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Scan Settings
+# ─────────────────────────────────────────────────────────────────────────────
+branch: main
+compact: true
+directory:
+  - .
+download-external-modules: false
+evaluate-variables: true
+framework:
+  - terraform
+  - terraform_plan
+  - secrets
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Output
+# ─────────────────────────────────────────────────────────────────────────────
+output:
+  - cli
+  - junitxml
+output-file-path: test-results/
+quiet: true
+soft-fail: false
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Check Control
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Run only specific checks (uncomment to whitelist)
+# check:
+#   - CKV_TF_1    # Module sources use commit hash
+#   - CKV_TF_2    # Module sources use version tag
+
+# Skip specific checks (document reason and expiry)
+skip-check: []
+  # - CKV_TF_1    # We use tags not commit hashes, exp:2026-06-01
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Path Control
+# ─────────────────────────────────────────────────────────────────────────────
+skip-path:
+  - .terraform/
+  - .terragrunt-cache/
+  - testdata/
+  - test-fixtures/
+  - vendor/
+  - node_modules/
+  - "*.tfstate"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Custom Policies (uncomment to enable)
+# ─────────────────────────────────────────────────────────────────────────────
+# external-checks-dir:
+#   - ./policies/checkov
+
+# Shared org-wide policy repo
+# external-checks-git:
+#   - https://github.com/your-org/checkov-policies.git
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Enforcement — hard-fail on secrets regardless of other settings
+# ─────────────────────────────────────────────────────────────────────────────
+hard-fail-on:
+  - CKV_SECRET_1
+  - CKV_SECRET_2
+  - CKV_SECRET_3
+  - CKV_SECRET_4
+  - CKV_SECRET_5
+  - CKV_SECRET_6
+
+soft-fail-on:
+  - LOW
+  - MEDIUM
