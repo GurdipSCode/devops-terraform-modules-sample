@@ -1,0 +1,72 @@
+# trivy.yaml — Trivy configuration for Terraform repositories
+# https://aquasecurity.github.io/trivy/latest/docs/references/configuration/config-file/
+# Usage: trivy config .
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Global
+# ─────────────────────────────────────────────────────────────────────────────
+cache:
+  dir: .trivy-cache
+
+severity:
+  - CRITICAL
+  - HIGH
+  - MEDIUM
+
+exit-code: 1
+format: table
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Scanners
+# ─────────────────────────────────────────────────────────────────────────────
+scan:
+  scanners:
+    - misconfig
+    - secret
+  skip-policy-update: false
+  file-patterns:
+    - "*.tf"
+    - "*.tfvars"
+    - "*.hcl"
+    - "Dockerfile"
+    - "*.yaml"
+    - "*.yml"
+    - "*.json"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Misconfiguration (IaC)
+# ─────────────────────────────────────────────────────────────────────────────
+misconfiguration:
+  terraform:
+    exclude-downloaded-modules: true
+  ignorefile: .trivyignore
+  include-non-failures: false
+
+  # Custom Rego policies (uncomment to enable)
+  # policy: ./policies
+  # policy-namespaces:
+  #   - custom
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Secret Scanning
+# ─────────────────────────────────────────────────────────────────────────────
+secret:
+  config: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Exclusions
+# ─────────────────────────────────────────────────────────────────────────────
+skip-dirs:
+  - .terraform
+  - .terragrunt-cache
+  - .git
+  - node_modules
+  - vendor
+  - testdata
+  - test-fixtures
+  - .trivy-cache
+
+skip-files:
+  - "**/*.tfstate"
+  - "**/*.tfstate.backup"
+  - "**/*.tfplan"
