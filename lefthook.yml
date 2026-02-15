@@ -1,0 +1,232 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/evilmartians/lefthook/master/schema.json
+# Lefthook Configuration for Terraform Modules
+# https://github.com/evilmartians/lefthook
+#
+# Install: lefthook install
+# Run all: lefthook run pre-commit
+
+assert_lefthook_installed: true
+no_tty: false
+colors: true
+skip_output:
+  - meta
+  - empty_summary
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PRE-COMMIT — runs on every commit
+# ─────────────────────────────────────────────────────────────────────────────
+pre-commit:
+  parallel: true
+  commands:
+
+    # ── Terraform ──────────────────────────────────────────────────────
+    terraform-fmt:
+      glob: "*.tf"
+      run: terraform fmt -check -recursive -diff
+      fail_text: "Run `terraform fmt -recursive` to fix formatting"
+
+    terraform-validate:
+      glob: "*.tf"
+      run: |
+        find . -name '*.tf' -not -path '*/.terraform/*' \
+          -exec dirname {} \; | sort -u | while read -r dir; do
+          echo "→ Validating $dir"
+          terraform -chdir="$dir" init -backend=false -input=false > /dev/null 2>&1
+          terraform -chdir="$dir" validate
+        done
+      fail_text: "Terraform validation failed"
+
+    tflint:
+      glob: "*.tf"
+      run: |
+        find . -name '*.tf' -not -path '*/.terraform/*' \
+          -exec dirname {} \; | sort -u | while read -r dir; do
+          echo "→ Linting $dir"
+          tflint --chdir="$dir" --init > /dev/null 2>&1
+          tflint --chdir="$dir"
+        done
+      fail_text: "TFLint found issues"
+
+    # ── Security Scanning ──────────────────────────────────────────────
+    trivy-config:
+      glob: "*.tf"
+      run: trivy config --exit-code 1 --severity HIGH,CRITICAL --tf-exclude-downloaded-modules .
+      fail_text: "Trivy found security issues"
+
+    tfsec:
+      glob: "*.tf"
+      run: tfsec --soft-fail --minimum-severity HIGH .
+      fail_text: "tfsec found security issues"
+
+    checkov:
+      glob: "*.tf"
+      run: checkov -d . --quiet --compact --skip-path .terraform
+      fail_text: "Checkov policy check failed"
+
+    # ── Documentation ──────────────────────────────────────────────────
+    terraform-docs:
+      glob: "*.tf"
+      run: |
+        find . -name '*.tf' -not -path '*/.terraform/*' -not -path '*/examples/*' \
+          -exec dirname {} \; | sort -u | while read -r dir; do
+          if [ -f "$dir/README.md" ]; then
+            terraform-docs markdown table --output-check "$dir"
+          fi
+        done
+      fail_text: "README is out of date. Run `terraform-docs markdown table --output-file README.md .`"
+
+    # ── General Files ──────────────────────────────────────────────────
+    trailing-whitespace:
+      run: git diff --cached --check
+      fail_text: "Trailing whitespace detected"
+
+    check-merge-conflicts:
+      run: grep -rn '<<<<<<< ' {staged_files} || true
+      fail_text: "Merge conflict markers found"
+
+    yaml-lint:
+      glob: "*.{yml,yaml}"
+      run: yamllint -c .yamllint.yml {staged_files}
+      fail_text: "YAML lint errors found"
+
+    markdown-lint:
+      glob: "*.md"
+      run: markdownlint --config .markdownlint.yml {staged_files}
+      fail_text: "Markdown lint errors found"
+
+    shellcheck:
+      glob: "*.sh"
+      run: shellcheck {staged_files}
+      fail_text: "ShellCheck found issues in shell scripts"
+
+    check-json:
+      glob: "*.json"
+      run: |
+        for f in {staged_files}; do
+          python3 -m json.tool "$f" > /dev/null
+        done
+      fail_text: "Invalid JSON detected"
+
+    detect-secrets:
+      run: detect-secrets-hook {staged_files} --baseline .secrets.baseline
+      fail_text: "Potential secrets detected in staged files"
+
+    check-symlinks:
+      run: |
+        for f in {staged_files}; do
+          if [ -L "$f" ] && [ ! -e "$f" ]; then
+            echo "Broken symlink: $f"
+            exit 1
+          fi
+        done
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMMIT-MSG — enforce conventional commits
+# ─────────────────────────────────────────────────────────────────────────────
+commit-msg:
+  commands:
+    conventional-commit:
+      run: |
+        MSG=$(head -1 {1})
+        PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert|security|breaking)(\(.+\))?!?:\s.{1,}'
+        if ! echo "$MSG" | grep -qE "$PATTERN"; then
+          echo "──────────────────────────────────────────────────────────"
+          echo "❌ Commit message does not follow Conventional Commits"
+          echo ""
+          echo "  Expected: <type>(<scope>): <description>"
+          echo ""
+          echo "  Types: feat, fix, docs, style, refactor, perf,"
+          echo "         test, build, ci, chore, revert, security"
+          echo ""
+          echo "  Examples:"
+          echo "    feat(segments): add DHCP relay support"
+          echo "    fix(firewall): correct rule ordering logic"
+          echo "    docs: update README with new examples"
+          echo "    breaking(tier1)!: rename gateway_name to display_name"
+          echo "──────────────────────────────────────────────────────────"
+          exit 1
+        fi
+
+    max-length:
+      run: |
+        MSG=$(head -1 {1})
+        if [ ${#MSG} -gt 100 ]; then
+          echo "❌ Commit subject exceeds 100 characters (${#MSG})"
+          exit 1
+        fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PRE-PUSH — heavier checks before pushing
+# ─────────────────────────────────────────────────────────────────────────────
+pre-push:
+  parallel: true
+  commands:
+
+    terraform-plan-examples:
+      glob: "*.tf"
+      run: |
+        for dir in examples/*/; do
+          if [ -d "$dir" ]; then
+            echo "→ Planning $dir"
+            terraform -chdir="$dir" init -backend=false -input=false > /dev/null 2>&1
+            terraform -chdir="$dir" plan -input=false -no-color
+          fi
+        done
+      fail_text: "Terraform plan failed for examples"
+
+    terraform-test:
+      glob: "*.tf"
+      run: |
+        if [ -d "tests" ]; then
+          terraform init -backend=false > /dev/null 2>&1
+          terraform test -no-color
+        fi
+      fail_text: "Terraform tests failed"
+
+    tflint-deep:
+      glob: "*.tf"
+      run: |
+        find . -name '*.tf' -not -path '*/.terraform/*' \
+          -exec dirname {} \; | sort -u | while read -r dir; do
+          tflint --chdir="$dir" --init > /dev/null 2>&1
+          tflint --chdir="$dir" --force
+        done
+      fail_text: "TFLint deep scan found issues"
+
+    infracost:
+      glob: "*.tf"
+      run: |
+        if command -v infracost &> /dev/null; then
+          for dir in examples/*/; do
+            if [ -d "$dir" ]; then
+              echo "→ Cost estimate for $dir"
+              infracost breakdown --path="$dir" --format table --no-color
+            fi
+          done
+        fi
+      fail_text: "Infracost estimation failed"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SKIP settings — opt out of specific hooks when needed
+# ─────────────────────────────────────────────────────────────────────────────
+# Usage:
+#   LEFTHOOK_EXCLUDE=security git commit -m "..."   # skip security scanners
+#   lefthook run pre-commit --force                  # run even if skipped
+
+# Group tags for selective skipping
+pre-commit-groups:
+  security:
+    - trivy-config
+    - tfsec
+    - checkov
+    - detect-secrets
+  lint:
+    - tflint
+    - yaml-lint
+    - markdown-lint
+    - shellcheck
+  format:
+    - terraform-fmt
+    - trailing-whitespace
+  docs:
+    - terraform-docs
