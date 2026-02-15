@@ -1,0 +1,128 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/GitGuardian/ggshield/main/doc/schemas/config.schema.json
+# GitGuardian (ggshield) Configuration for Terraform Modules
+# https://docs.gitguardian.com/ggshield-docs/reference/configuration
+
+version: 2
+
+instance: https://dashboard.gitguardian.com
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Secret Detection
+# ─────────────────────────────────────────────────────────────────────────────
+secret:
+  # Show full secrets in CLI output (set false in CI)
+  show-secrets: false
+
+  # Exit code when secrets are found (non-zero fails CI)
+  exit-zero: false
+
+  # Paths to exclude from scanning
+  ignored-paths:
+    # Terraform internals
+    - "**/.terraform/**"
+    - "**/.terraform.lock.hcl"
+    - "**/terraform.tfstate"
+    - "**/terraform.tfstate.backup"
+    - "**/*.tfplan"
+    - "**/*.tfplan.binary"
+
+    # Test fixtures & mocks
+    - "**/testdata/**"
+    - "**/test-fixtures/**"
+    - "**/tests/mocks/**"
+
+    # Vendored dependencies
+    - "**/vendor/**"
+    - "**/node_modules/**"
+
+    # Generated docs
+    - "**/CHANGELOG.md"
+
+    # Binary & media files
+    - "**/*.png"
+    - "**/*.jpg"
+    - "**/*.gif"
+    - "**/*.ico"
+    - "**/*.svg"
+    - "**/*.zip"
+    - "**/*.tar.gz"
+    - "**/*.woff"
+    - "**/*.woff2"
+
+  # Matches to ignore (false positives)
+  ignored-matches:
+    # Terraform example placeholders
+    - name: "Terraform example placeholder passwords"
+      match: "P@ssw0rd123!"
+
+    - name: "Terraform example placeholder tokens"
+      match: "your-token-here"
+
+    - name: "Terraform example placeholder keys"
+      match: "AKIAEXAMPLEKEYID1234"
+
+    - name: "NSX example placeholder host"
+      match: "nsx-manager.example.com"
+
+    - name: "Example SSH public key"
+      match: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAB"
+
+    # Common test/example dummy values
+    - name: "Dummy AWS account ID"
+      match: "123456789012"
+
+    - name: "Terraform docs example ARN"
+      match: "arn:aws:iam::123456789012:"
+
+  # Specific detector overrides
+  ignored-detectors:
+    # Ignore generic high-entropy strings in .tf files
+    # (Terraform resource IDs often trigger false positives)
+    # - name: "generic_high_entropy_secret"
+
+  # Ignore known secret SHAs (add after triaging)
+  ignored-known-secrets: []
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Infrastructure as Code (IaC) Scanning
+# ─────────────────────────────────────────────────────────────────────────────
+iac:
+  # Paths to scan for IaC misconfigurations
+  scan:
+    - "."
+    - "modules/"
+    - "examples/"
+
+  # Paths to exclude from IaC scanning
+  ignored-paths:
+    - "**/.terraform/**"
+    - "**/testdata/**"
+
+  # Minimum severity to report: LOW, MEDIUM, HIGH, CRITICAL
+  minimum-severity: "HIGH"
+
+  # Ignored IaC vulnerabilities by policy ID
+  ignored-policies: []
+    # Example: ignore specific Checkov/Bridgecrew policies
+    # - "CKV_AWS_79"   # Ensure Instance Metadata Service Version 1 is not enabled
+    # - "CKV_TF_1"     # Ensure Terraform module sources use a commit hash
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SCA (Software Composition Analysis)
+# ─────────────────────────────────────────────────────────────────────────────
+sca:
+  # Paths to exclude from SCA scanning
+  ignored-paths:
+    - "**/.terraform/**"
+    - "**/vendor/**"
+
+  # Minimum severity to report: LOW, MEDIUM, HIGH, CRITICAL
+  minimum-severity: "HIGH"
+
+  # Ignored SCA vulnerabilities by CVE
+  ignored-vulnerabilities: []
+    # Example:
+    # - identifier: "CVE-2023-12345"
+    #   path: "go.sum"
+    #   comment: "Not exploitable in our context — tracked in JIRA-456"
+    #   expiry: "2025-12-31"
