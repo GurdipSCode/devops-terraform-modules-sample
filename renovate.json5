@@ -1,0 +1,167 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Renovate configuration for Terraform module repositories",
+
+  "extends": [
+    "config:recommended",
+    "docker:enableMajor",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":separateMajorReleases",
+    ":autodetectPinVersions",
+    "schedule:earlyMondays",
+    "group:allNonMajor"
+  ],
+
+  "labels": ["dependencies", "automated"],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "rebaseWhen": "conflicted",
+  "automerge": false,
+  "platformAutomerge": false,
+  "rollbackPrs": true,
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"],
+    "automerge": true
+  },
+
+  "ignorePaths": [
+    "**/testdata/**",
+    "**/test-fixtures/**",
+    "**/.terraform/**"
+  ],
+
+  "terraform": {
+    "enabled": true
+  },
+
+  "packageRules": [
+    {
+      "description": "Terraform providers — group minor+patch, separate major",
+      "matchDatasources": ["terraform-provider"],
+      "groupName": "terraform providers",
+      "groupSlug": "tf-providers",
+      "labels": ["dependencies", "terraform", "providers"],
+      "separateMajorMinor": true,
+      "commitMessagePrefix": "fix(deps):",
+      "prPriority": 10
+    },
+    {
+      "description": "Terraform provider major versions — require manual review",
+      "matchDatasources": ["terraform-provider"],
+      "matchUpdateTypes": ["major"],
+      "groupName": "terraform providers (major)",
+      "labels": ["dependencies", "terraform", "providers", "breaking-change"],
+      "commitMessagePrefix": "breaking(deps):",
+      "automerge": false,
+      "prPriority": 20
+    },
+    {
+      "description": "Terraform modules — group by source",
+      "matchDatasources": ["terraform-module"],
+      "groupName": "terraform modules",
+      "groupSlug": "tf-modules",
+      "labels": ["dependencies", "terraform", "modules"],
+      "commitMessagePrefix": "chore(deps):"
+    },
+    {
+      "description": "Terraform core version constraint",
+      "matchDatasources": ["github-tags"],
+      "matchPackageNames": ["hashicorp/terraform"],
+      "labels": ["dependencies", "terraform", "core"],
+      "separateMajorMinor": true,
+      "commitMessagePrefix": "build(terraform):"
+    },
+    {
+      "description": "Hashicorp providers — auto-merge patch updates",
+      "matchDatasources": ["terraform-provider"],
+      "matchPackagePrefixes": ["hashicorp/"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "commitMessagePrefix": "fix(deps):"
+    },
+    {
+      "description": "GitHub Actions — auto-merge minor and patch",
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions",
+      "labels": ["dependencies", "ci"],
+      "automerge": true,
+      "automergeType": "pr",
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "commitMessagePrefix": "ci(deps):"
+    },
+    {
+      "description": "GitHub Actions major — require review",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["dependencies", "ci", "breaking-change"],
+      "commitMessagePrefix": "ci(deps):"
+    },
+    {
+      "description": "Go dependencies (Terratest)",
+      "matchManagers": ["gomod"],
+      "groupName": "go dependencies",
+      "labels": ["dependencies", "go", "tests"],
+      "commitMessagePrefix": "test(deps):",
+      "automerge": false
+    },
+    {
+      "description": "Docker base images",
+      "matchDatasources": ["docker"],
+      "labels": ["dependencies", "docker"],
+      "commitMessagePrefix": "build(docker):",
+      "pinDigests": true
+    },
+    {
+      "description": "Pre-commit hooks",
+      "matchManagers": ["pre-commit"],
+      "labels": ["dependencies", "tooling"],
+      "automerge": true,
+      "commitMessagePrefix": "chore(hooks):"
+    }
+  ],
+
+  "customManagers": [
+    {
+      "description": "Detect Terraform version in CI workflows",
+      "customType": "regex",
+      "fileMatch": ["\\.github/workflows/.*\\.ya?ml$"],
+      "matchStrings": [
+        "terraform[_-]version:\\s*[\"']?(?<currentValue>[\\d.]+)[\"']?"
+      ],
+      "datasourceTemplate": "github-tags",
+      "packageNameTemplate": "hashicorp/terraform",
+      "depNameTemplate": "terraform",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    },
+    {
+      "description": "Detect tflint version in CI",
+      "customType": "regex",
+      "fileMatch": ["\\.github/workflows/.*\\.ya?ml$"],
+      "matchStrings": [
+        "tflint[_-]version:\\s*[\"']?v?(?<currentValue>[\\d.]+)[\"']?"
+      ],
+      "datasourceTemplate": "github-releases",
+      "packageNameTemplate": "terraform-linters/tflint",
+      "depNameTemplate": "tflint"
+    },
+    {
+      "description": "Detect trivy version in CI",
+      "customType": "regex",
+      "fileMatch": ["\\.github/workflows/.*\\.ya?ml$"],
+      "matchStrings": [
+        "trivy[_-]version:\\s*[\"']?v?(?<currentValue>[\\d.]+)[\"']?"
+      ],
+      "datasourceTemplate": "github-releases",
+      "packageNameTemplate": "aquasecurity/trivy",
+      "depNameTemplate": "trivy"
+    }
+  ],
+
+  "postUpdateOptions": [
+    "gomodTidy"
+  ]
+}
