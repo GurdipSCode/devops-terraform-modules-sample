@@ -1,0 +1,86 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Terraform
+# ─────────────────────────────────────────────────────────────────────────────
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+*.tfplan
+*.tfplan.binary
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+.terraform.tfstate.lock.info
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Terragrunt
+# ─────────────────────────────────────────────────────────────────────────────
+.terragrunt-cache/
+terragrunt-debug.tfvars.json
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Environment & Secrets
+# ─────────────────────────────────────────────────────────────────────────────
+.env
+.env.*
+*.auto.tfvars
+*.auto.tfvars.json
+terraform.tfvars
+terraform.tfvars.json
+secrets.tf
+**/credentials*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+
+# ─────────────────────────────────────────────────────────────────────────────
+# IDE & Editors
+# ─────────────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.settings/
+.classpath
+*.sublime-workspace
+*.sublime-project
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OS
+# ─────────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Tools & CI Caches
+# ─────────────────────────────────────────────────────────────────────────────
+.tflint.hcl.lock
+.infracost/
+.checkov.yaml.cache
+.trivyignore.cache
+node_modules/
+vendor/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Test Artifacts
+# ─────────────────────────────────────────────────────────────────────────────
+test-results/
+coverage/
+*.test.log
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Keep lock file (uncomment ONE)
+# ─────────────────────────────────────────────────────────────────────────────
+# Root modules: KEEP the lock file (committed by default)
+# Shared modules: IGNORE the lock file (uncomment line below)
+# .terraform.lock.hcl
