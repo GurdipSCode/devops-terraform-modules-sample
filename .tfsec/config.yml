@@ -1,0 +1,17 @@
+# .tfsec/config.yml — tfsec configuration
+# https://aquasecurity.github.io/tfsec/latest/guides/configuration/config/
+# Note: tfsec is being merged into Trivy. This config works with standalone tfsec.
+
+---
+minimum_severity: MEDIUM
+
+# Excluded checks (document reason and set expiry)
+exclude: []
+  # - aws-s3-enable-bucket-logging       # Accepted risk: JIRA-123, exp:2026-06-01
+
+exclude_path:
+  - .terraform/
+  - .terragrunt-cache/
+  - testdata/
+  - test-fixtures/
+  - vendor/
