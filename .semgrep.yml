@@ -1,0 +1,48 @@
+# .semgrep.yml — Semgrep configuration for Terraform repositories
+# https://semgrep.dev/docs/running-rules/
+#
+# This config pulls rules from a centralized GitHub repository so that
+# all Terraform modules in the organization share a single policy source.
+# Local rules can be added below as overrides or supplements.
+
+rules:
+  # ── Remote rules from your org's central policy repo ───────────────
+  # Semgrep fetches these at scan time. Pin to a tag or branch for stability.
+  #
+  # Directory structure in the remote repo:
+  #   semgrep-rules/
+  #   ├── terraform/
+  #   │   ├── security.yaml        # Hardcoded creds, sensitive outputs, etc.
+  #   │   ├── best-practices.yaml   # Descriptions, naming, module structure
+  #   │   └── provider-specific/
+  #   │       ├── aws.yaml
+  #   │       ├── azure.yaml
+  #   │       └── gcp.yaml
+  #   └── general/
+  #       └── secrets.yaml
+
+  # Pull all Terraform rules from the central repo
+  - r: https://github.com/<YOUR_ORG>/semgrep-rules/terraform
+
+  # Pull general/shared rules (secrets, etc.)
+  - r: https://github.com/<YOUR_ORG>/semgrep-rules/general
+
+  # ── Optional: pin to a specific branch or tag ──────────────────────
+  # - r: https://github.com/<YOUR_ORG>/semgrep-rules/terraform@v1.0.0
+  # - r: https://github.com/<YOUR_ORG>/semgrep-rules/terraform@main
+
+  # ── Optional: Semgrep Registry rulesets ────────────────────────────
+  # - p/terraform                   # Community Terraform rules
+  # - p/secrets                     # Secret detection rules
+  # - p/supply-chain                # Dependency supply chain rules
+
+  # ── Local overrides (project-specific rules if needed) ─────────────
+  # Add inline rules here only if they are specific to this repo and
+  # don't belong in the shared policy repo.
+  #
+  # - id: local-example-rule
+  #   pattern: |
+  #     resource "$TYPE" "$NAME" { ... }
+  #   message: "Example local rule"
+  #   languages: [hcl]
+  #   severity: INFO
